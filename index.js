@@ -1,5 +1,5 @@
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 require('dotenv').config()
 const app=express();
@@ -38,12 +38,50 @@ async function run() {
 
 
     const classesCollection = client.db("dreamPaintDB").collection("classes");
+    const myClassesCollection=client.db("dreamPaintDB").collection("myClasses")
 
     app.get("/classes", async(req,res)=>{
       const result= await classesCollection.find().toArray()
       res.send(result)
     })
 
+
+    app.get("/myclasses", async(req,res)=>{
+      const email=req.query.email;
+      // console.log(email);
+      // if (!email) {
+      //   res.send([])
+      // };
+      const query={email:email}
+      const result= await myClassesCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    app.get('/selected', async(req,res)=>{
+
+      const result=await myClassesCollection.find().toArray()
+      res.send(result)
+    })
+
+    app.post('/myclasses', async(req, res)=>{
+      const myClass =req.body;
+      // console.log(myClass)
+      // const isSelected= myClassesCollection.findOne(myClass.email)
+      
+        
+        const result=await myClassesCollection.insertOne(myClass)
+        res.send(result)
+      
+    })
+
+    app.delete('/selected/:id', async(req,res)=>{
+      
+      const id=req.params.id;
+      console.log(id)
+      const query={_id: new ObjectId(id)};
+      const result=await myClassesCollection.deleteOne(query)
+      res.send(result)
+    })
 
 
 
