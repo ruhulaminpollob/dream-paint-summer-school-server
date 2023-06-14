@@ -86,9 +86,16 @@ async function run() {
       const result = await usersCollection.find().toArray()
       res.send(result)
     })
+    //get single users data
+    app.get('.user/:email', verifyJWT, async(req,res)=>{
+      const email=req.params.email;
+      const query={email: email}
+      const result=await usersCollection.findOne(query)
+      res.send(result)
+    })
+
     app.post('/users', async (req, res) => {
       const user = req.body;
-
       const query = { email: user.email }
       const existingUser = await usersCollection.findOne(query)
       if (existingUser) {
@@ -126,7 +133,7 @@ async function run() {
 
     // instructor check ----------
 
-    app.get('users/instructor/:email', verifyJWT, async(req,res)=>{
+    app.get('/users/instructor/:email', verifyJWT, async(req,res)=>{
       const email=req.params.email;
 
       if (req.decoded.email !== email) {
@@ -161,6 +168,11 @@ async function run() {
 
     app.get("/classes", async (req, res) => {
       const result = await classesCollection.find().toArray()
+      res.send(result)
+    })
+    app.post('/classes', async(req,res)=>{
+      const addClass=req.body;
+      const result=await classesCollection.insertOne(addClass)
       res.send(result)
     })
 
