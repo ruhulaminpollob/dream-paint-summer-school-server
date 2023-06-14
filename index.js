@@ -69,7 +69,7 @@ async function run() {
       const token = jwt.sign(user, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1h' })
       res.send({token})
     })
-
+ 
 
     // verify admin middleware ---------
 
@@ -100,7 +100,7 @@ async function run() {
 
     // admin check ------------
 
-    app.get('users/admin/:email', verifyJWT, async(req,res)=>{
+    app.get('/user/admin/:email', verifyJWT, async(req,res)=>{
       const email=req.params.email;
 
       if (req.decoded.email !== email) {
@@ -179,6 +179,7 @@ async function run() {
       }
       const query = { email: email }
       const result = await myClassesCollection.find(query).toArray()
+      console.log(result)
       res.send(result)
     })
 
