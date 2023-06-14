@@ -82,6 +82,17 @@ async function run() {
       }
       next()
     }
+    // verify instructor middleware ---------
+
+    const verifyInstructor= async(req,res,next) =>{
+      const email=req.decoded.email;
+      const query ={email: email}
+      const user =await usersCollection.findOne(query)
+      if (user?.role !== 'Instructor') {
+        return res.status(403).send({error:true,message:'Forbidden Access'})
+      }
+      next()
+    }
     app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
       const result = await usersCollection.find().toArray()
       res.send(result)
@@ -170,7 +181,7 @@ async function run() {
       const result = await classesCollection.find().toArray()
       res.send(result)
     })
-    app.post('/classes', async(req,res)=>{
+    app.post('/classes', verifyJWT, verifyInstructor, async(req,res)=>{
       const addClass=req.body;
       const result=await classesCollection.insertOne(addClass)
       res.send(result)
