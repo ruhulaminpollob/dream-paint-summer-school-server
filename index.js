@@ -11,6 +11,26 @@ app.use(cors());
 app.use(express.json())
 
 
+
+// varify jwt 
+
+const verifyJWT= (req,res,next)=>{
+  const authorization=req.headers.authorization;
+  if (!authorization) {
+    return res.status(401).send({error:true, message:'Unauthorized Access'})
+  }
+  // bearer token-----------------
+  const token=authorization.split(' ')[1]
+  jwt.verify(token,process.env.SECRET_ACCESS_TOKEN, (error, decoded)=>{
+    if (error) {
+      return res.status(401).send({error:true, message:'Unauthorized Access'})
+    }
+    req.decoded =decoded
+    next()
+
+  })
+}
+
 app.get('/', (req, res) => {
   res.send("Don't move! Dream paint is now painting you")
 })
@@ -46,7 +66,7 @@ async function run() {
     // JWT TOKEN  
     app.post('/jwt', (req, res) => {
       const user = req.body;
-      const token = jwt.sign(user, env.process.SECRET_ACCESS_TOKEN, { expiresIn: '1h' })
+      const token = jwt.sign(user, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1h' })
       res.send({token})
     })
 
