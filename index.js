@@ -186,6 +186,13 @@ async function run() {
       const result=await classesCollection.insertOne(addClass)
       res.send(result)
     })
+    
+    app.delete('/classes/:id', verifyJWT, verifyAdmin, async(req,res)=>{
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await classesCollection.deleteOne(query)
+      res.send(result)
+    })
 
 
     app.get("/myclasses", verifyJWT, async (req, res) => {
