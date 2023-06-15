@@ -204,13 +204,24 @@ async function run() {
       const result = await classesCollection.updateOne(filter, updateDoc)
       res.send(result)
     })
-
-    app.delete('/classes/:id', verifyJWT, verifyAdmin, async(req,res)=>{
+    app.patch('/classesdeny/:id', verifyJWT, verifyAdmin, async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await classesCollection.deleteOne(query)
+      const filter = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: {
+          state: 'deny'
+        }
+      }
+      const result = await classesCollection.updateOne(filter, updateDoc)
       res.send(result)
     })
+
+    // app.delete('/classes/:id', verifyJWT, verifyAdmin, async(req,res)=>{
+    //   const id = req.params.id;
+    //   const query = { _id: new ObjectId(id) };
+    //   const result = await classesCollection.deleteOne(query)
+    //   res.send(result)
+    // })
 
 
     app.get("/myclasses", verifyJWT, async (req, res) => {
