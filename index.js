@@ -178,7 +178,8 @@ async function run() {
     })
 
     app.get("/classes", async (req, res) => {
-      const result = await classesCollection.find().toArray()
+      const filter={state:'approved'}
+      const result = await classesCollection.find(filter).toArray()
       res.send(result)
     })
     app.post('/classes', verifyJWT, verifyInstructor, async(req,res)=>{
@@ -186,7 +187,7 @@ async function run() {
       const result=await classesCollection.insertOne(addClass)
       res.send(result)
     })
-    
+
     app.delete('/classes/:id', verifyJWT, verifyAdmin, async(req,res)=>{
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
