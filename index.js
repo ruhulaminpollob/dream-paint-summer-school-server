@@ -177,7 +177,11 @@ async function run() {
       res.send(result)
     })
 
-    app.get("/classes", async (req, res) => {
+    app.get("/classes", verifyJWT,verifyAdmin, async (req, res) => {
+      const result = await classesCollection.find().toArray()
+      res.send(result)
+    })
+    app.get("/aprovedclasses", async (req, res) => {
       const filter={state:'approved'}
       const result = await classesCollection.find(filter).toArray()
       res.send(result)
