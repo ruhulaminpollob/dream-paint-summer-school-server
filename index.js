@@ -99,6 +99,12 @@ async function run() {
       const result = await usersCollection.find().toArray()
       res.send(result)
     })
+    // get all instructors ----
+    app.get('/instructor', async (req, res) => {
+      const query={role: 'Instructor'}
+      const result = await usersCollection.find(query).toArray()
+      res.send(result)
+    })
     //get single users data
     app.get('.user/:email', verifyJWT, async (req, res) => {
       const email = req.params.email;
@@ -120,12 +126,10 @@ async function run() {
 
     // admin check ------------
 
-    app.get('/user/admin/:email', verifyJWT, async (req, res) => {
+    app.get('/user/admin/:email', async (req, res) => {
       const email = req.params.email;
 
-      if (req.decoded.email !== email) {
-        res.send({ admin: false })
-      }
+      
       const query = { email: email };
       const user = await usersCollection.findOne(query);
       const result = { admin: user?.role === 'Admin' };
@@ -146,12 +150,9 @@ async function run() {
 
     // instructor check ----------
 
-    app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
+    app.get('/users/instructor/:email', async (req, res) => {
       const email = req.params.email;
 
-      if (req.decoded.email !== email) {
-        res.send({ instructor: false })
-      }
       const query = { email: email };
       const user = await usersCollection.findOne(query);
       const result = { instructor: user?.role === 'Instructor' };
@@ -243,7 +244,6 @@ async function run() {
 
     app.get("/myclasses", verifyJWT, async (req, res) => {
       const email = req.query.email;
-      // console.log(email);
       if (!email) {
         res.send([])
       };
@@ -255,7 +255,6 @@ async function run() {
       }
       const query = { email: email }
       const result = await myClassesCollection.find(query).toArray()
-      console.log(result)
       res.send(result)
     })
 
@@ -267,7 +266,6 @@ async function run() {
 
     app.post('/myclasses', async (req, res) => {
       const myClass = req.body;
-      // console.log(myClass)
 
       const query = { email: myClass.email, name: myClass.name }
       const isSelected = await myClassesCollection.find(query).toArray();
@@ -300,7 +298,6 @@ async function run() {
     app.delete('/selected/:id', async (req, res) => {
 
       const id = req.params.id;
-      console.log(id)
       const query = { _id: new ObjectId(id) };
       const result = await myClassesCollection.deleteOne(query)
       res.send(result)
@@ -311,36 +308,41 @@ async function run() {
 
     //-------get single selected class for payment
 
-    app.get('/payment/:id', async(req,res)=>{
-      const id=req.params.id;
-      const query={_id: new ObjectId(id)}
-      const result=await myClassesCollection.findOne(query)
+    app.get('/payment/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await myClassesCollection.findOne(query)
       res.send(result)
     })
-    // ------------ update available seats--------------
-    app.get('/payments', async(req,res)=>{
-        const className=req.body.name
-        console.log(className)
-    })
+    
 
-    // TODO 
-    app.get('/payments', verifyJWT , async (req, res) => {
+    app.get('/payments', verifyJWT, async (req, res) => {
       const email = req.query.email;
-      const query={userEmail: email}
-      const result= await paymentCollection.find(query).toArray()
+      const query = { userEmail: email }
+      const result = await paymentCollection.find(query).toArray()
       res.send(result)
     })
 
     app.post('/payments', verifyJWT, async (req, res) => {
       const payment = req.body
+
+      //-------update available seats count---------
+      const filterClass = { name: payment.paidClassesName }
+      const classDoc = await classesCollection.findOne(filterClass);
+      const currentAvailableSeats = classDoc.availableSeats;
+      const newAvailableSeats = currentAvailableSeats - 1;
+      const updateSeatsDoc = {
+        $set: {
+          availableSeats: newAvailableSeats
+        }
+      }
+      const updateSeats = await classesCollection.updateOne(filterClass, updateSeatsDoc);
       
-
-
 
       // payment api -------
       const result = await paymentCollection.insertOne(payment)
       //--------update enrolled api--------
-      const filter = { _id: new ObjectId(payment.paidClassesId) } 
+      const filter = { _id: new ObjectId(payment.paidClassesId) }
       const updateDoc = {
         $set: {
           state: 'enrolled'
