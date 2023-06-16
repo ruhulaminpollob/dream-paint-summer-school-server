@@ -4,7 +4,7 @@ const cors = require('cors');
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
 const app = express();
-const stripe=require('stripe')(process.env.PAYMENT_KEY)
+const stripe = require('stripe')(process.env.PAYMENT_KEY)
 const port = process.env.PORT || 5000;
 
 
@@ -190,7 +190,7 @@ async function run() {
     })
 
     // get a single class -------------
-    app.get('/singleclass/:id',  async (req, res) => {
+    app.get('/singleclass/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) }
       const result = await classesCollection.findOne(query);
@@ -283,17 +283,17 @@ async function run() {
     })
 
     // payment intent------------------
-    app.post("/create-payment-intent", async (req, res) =>{
-        const {price}= req.body;
-        const amount=price*100;
-        const paymentIntent= await stripe.paymentIntents.create({
-          amount:amount,
-          currency:'usd',
-          payment_method_types:['card']
-        })
-        res.send({
-          clientSecret:paymentIntent.client_secret
-        })
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      })
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
     })
 
 
@@ -307,25 +307,51 @@ async function run() {
     })
 
 
-// payment--------------
+    // payment--------------
 
-app.post('/payments', verifyJWT, async(req,res)=>{
-  const payment=req.body
-  const result=await paymentCollection.insertOne(payment)
+    //-------get single selected class for payment
+
+    app.get('/payment/:id', async(req,res)=>{
+      const id=req.params.id;
+      const query={_id: new ObjectId(id)}
+      const result=await myClassesCollection.findOne(query)
+      res.send(result)
+    })
+    // ------------ update available seats--------------
+    app.get('/payments', async(req,res)=>{
+        const className=req.body.name
+        console.log(className)
+    })
+
+    // TODO 
+    app.get('/payments', verifyJWT , async (req, res) => {
+      const email = req.query.email;
+      const query={userEmail: email}
+      const result= await paymentCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    app.post('/payments', verifyJWT, async (req, res) => {
+      const payment = req.body
+      
 
 
-  // const query = {_id: {$in: payment.paidClassesId.map(id => new ObjectId(id))}}
-  // const deleteClass= await myClassesCollection.deleteMany(query)
 
-  const filter={_id: {$in: payment.paidClassesId.map(id=> new ObjectId(id))}}
-  const updateDoc = {
-    $set: {
-      state: 'enrolled'
-    }
-  }
-  const updateEnrolled=await myClassesCollection.updateMany(filter, updateDoc)
-  res.send(result)
-})
+      // payment api -------
+      const result = await paymentCollection.insertOne(payment)
+      //--------update enrolled api--------
+      const filter = { _id: new ObjectId(payment.paidClassesId) } 
+      const updateDoc = {
+        $set: {
+          state: 'enrolled'
+        }
+      }
+      const updateEnrolled = await myClassesCollection.updateMany(filter, updateDoc)
+      res.send(result)
+    })
+
+    // update available seats-------------
+
 
 
 
