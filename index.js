@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config()
 const jwt = require('jsonwebtoken');
 const app = express();
+const stripe=require('stripe')(process.env.PAYMENT_KEY)
 const port = process.env.PORT || 5000;
 
 
@@ -14,18 +15,18 @@ app.use(express.json())
 
 // varify jwt 
 
-const verifyJWT= (req,res,next)=>{
-  const authorization=req.headers.authorization;
+const verifyJWT = (req, res, next) => {
+  const authorization = req.headers.authorization;
   if (!authorization) {
-    return res.status(401).send({error:true, message:'Unauthorized Access'})
+    return res.status(401).send({ error: true, message: 'Unauthorized Access' })
   }
   // bearer token-----------------
-  const token=authorization.split(' ')[1]
-  jwt.verify(token,process.env.SECRET_ACCESS_TOKEN, (error, decoded)=>{
+  const token = authorization.split(' ')[1]
+  jwt.verify(token, process.env.SECRET_ACCESS_TOKEN, (error, decoded) => {
     if (error) {
-      return res.status(401).send({error:true, message:'Unauthorized Access'})
+      return res.status(401).send({ error: true, message: 'Unauthorized Access' })
     }
-    req.decoded =decoded
+    req.decoded = decoded
     next()
 
   })
@@ -61,35 +62,36 @@ async function run() {
     const classesCollection = client.db("dreamPaintDB").collection("classes");
     const myClassesCollection = client.db("dreamPaintDB").collection("myClasses")
     const usersCollection = client.db("dreamPaintDB").collection('users')
+    const paymentCollection = client.db("dreamPaintDB").collection('payment')
 
 
     // JWT TOKEN  
     app.post('/jwt', (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.SECRET_ACCESS_TOKEN, { expiresIn: '1h' })
-      res.send({token})
+      res.send({ token })
     })
- 
+
 
     // verify admin middleware ---------
 
-    const verifyAdmin= async(req,res,next) =>{
-      const email=req.decoded.email;
-      const query ={email: email}
-      const user =await usersCollection.findOne(query)
+    const verifyAdmin = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email }
+      const user = await usersCollection.findOne(query)
       if (user?.role !== 'Admin') {
-        return res.status(403).send({error:true,message:'Forbidden Access'})
+        return res.status(403).send({ error: true, message: 'Forbidden Access' })
       }
       next()
     }
     // verify instructor middleware ---------
 
-    const verifyInstructor= async(req,res,next) =>{
-      const email=req.decoded.email;
-      const query ={email: email}
-      const user =await usersCollection.findOne(query)
+    const verifyInstructor = async (req, res, next) => {
+      const email = req.decoded.email;
+      const query = { email: email }
+      const user = await usersCollection.findOne(query)
       if (user?.role !== 'Instructor') {
-        return res.status(403).send({error:true,message:'Forbidden Access'})
+        return res.status(403).send({ error: true, message: 'Forbidden Access' })
       }
       next()
     }
@@ -98,10 +100,10 @@ async function run() {
       res.send(result)
     })
     //get single users data
-    app.get('.user/:email', verifyJWT, async(req,res)=>{
-      const email=req.params.email;
-      const query={email: email}
-      const result=await usersCollection.findOne(query)
+    app.get('.user/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email }
+      const result = await usersCollection.findOne(query)
       res.send(result)
     })
 
@@ -118,15 +120,15 @@ async function run() {
 
     // admin check ------------
 
-    app.get('/user/admin/:email', verifyJWT, async(req,res)=>{
-      const email=req.params.email;
+    app.get('/user/admin/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
 
       if (req.decoded.email !== email) {
-        res.send({admin:false})
+        res.send({ admin: false })
       }
-      const query={email:email};
-      const user=await usersCollection.findOne(query);
-      const result={admin: user?.role === 'Admin'};
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { admin: user?.role === 'Admin' };
       res.send(result);
     })
     app.patch('/users/admin/:id', async (req, res) => {
@@ -144,17 +146,22 @@ async function run() {
 
     // instructor check ----------
 
-    app.get('/users/instructor/:email', verifyJWT, async(req,res)=>{
-      const email=req.params.email;
+    app.get('/users/instructor/:email', verifyJWT, async (req, res) => {
+      const email = req.params.email;
 
       if (req.decoded.email !== email) {
-        res.send({instructor:false})
+        res.send({ instructor: false })
       }
-      const query={email:email};
-      const user=await usersCollection.findOne(query);
-      const result={instructor: user?.role === 'Instructor'};
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      const result = { instructor: user?.role === 'Instructor' };
       res.send(result);
     })
+
+
+
+
+
     app.patch('/users/instructor/:id', async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) }
@@ -177,19 +184,29 @@ async function run() {
       res.send(result)
     })
 
-    app.get("/classes", verifyJWT,verifyAdmin, async (req, res) => {
+    app.get("/classes", verifyJWT, verifyAdmin, async (req, res) => {
       const result = await classesCollection.find().toArray()
       res.send(result)
     })
+
+    // get a single class -------------
+    app.get('/singleclass/:id',  async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await classesCollection.findOne(query);
+      res.send(result)
+    })
+
+
     app.get("/aprovedclasses", async (req, res) => {
-      const filter={state:'approved'}
+      const filter = { state: 'approved' }
       const result = await classesCollection.find(filter).toArray()
       res.send(result)
     })
 
-    app.post('/classes', verifyJWT, verifyInstructor, async(req,res)=>{
-      const addClass=req.body;
-      const result=await classesCollection.insertOne(addClass)
+    app.post('/classes', verifyJWT, verifyInstructor, async (req, res) => {
+      const addClass = req.body;
+      const result = await classesCollection.insertOne(addClass)
       res.send(result)
     })
 
@@ -232,9 +249,9 @@ async function run() {
       };
 
 
-      const decodedEmail=req.decoded.email;
+      const decodedEmail = req.decoded.email;
       if (email !== decodedEmail) {
-        return res.status(403).send({error:true, message:'Forbidden Access'})
+        return res.status(403).send({ error: true, message: 'Forbidden Access' })
       }
       const query = { email: email }
       const result = await myClassesCollection.find(query).toArray()
@@ -265,6 +282,21 @@ async function run() {
 
     })
 
+    // payment intent------------------
+    app.post("/create-payment-intent", async (req, res) =>{
+        const {price}= req.body;
+        const amount=price*100;
+        const paymentIntent= await stripe.paymentIntents.create({
+          amount:amount,
+          currency:'usd',
+          payment_method_types:['card']
+        })
+        res.send({
+          clientSecret:paymentIntent.client_secret
+        })
+    })
+
+
     app.delete('/selected/:id', async (req, res) => {
 
       const id = req.params.id;
@@ -275,7 +307,25 @@ async function run() {
     })
 
 
+// payment--------------
 
+app.post('/payments', verifyJWT, async(req,res)=>{
+  const payment=req.body
+  const result=await paymentCollection.insertOne(payment)
+
+
+  // const query = {_id: {$in: payment.paidClassesId.map(id => new ObjectId(id))}}
+  // const deleteClass= await myClassesCollection.deleteMany(query)
+
+  const filter={_id: {$in: payment.paidClassesId.map(id=> new ObjectId(id))}}
+  const updateDoc = {
+    $set: {
+      state: 'enrolled'
+    }
+  }
+  const updateEnrolled=await myClassesCollection.updateMany(filter, updateDoc)
+  res.send(result)
+})
 
 
 
